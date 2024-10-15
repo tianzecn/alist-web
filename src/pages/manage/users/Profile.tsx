@@ -1,3 +1,4 @@
+// 导入所需的组件和函数
 import {
   Alert,
   AlertDescription,
@@ -30,6 +31,7 @@ import {
   CredentialCreationOptionsJSON,
 } from "@github/webauthn-json/browser-ponyfill"
 
+// 权限徽章组件
 const PermissionBadge = (props: { can: boolean; children: JSXElement }) => {
   return (
     <Badge colorScheme={props.can ? "success" : "danger"}>
@@ -38,14 +40,19 @@ const PermissionBadge = (props: { can: boolean; children: JSXElement }) => {
   )
 }
 
+// 个人资料页面组件
 const Profile = () => {
   const t = useT()
   useManageTitle("manage.sidemenu.profile")
   const { searchParams, to } = useRouter()
+
+  // 创建状态变量
   const [username, setUsername] = createSignal(me().username)
   const [password, setPassword] = createSignal("")
   const [confirmPassword, setConfirmPassword] = createSignal("")
   const usecompatibility = getSettingBool("sso_compatibility_mode")
+
+  // 保存用户信息的函数
   const [loading, save] = useFetch(
     (ssoID?: boolean): PEmptyResp =>
       r.post("/me/update", {
@@ -55,6 +62,7 @@ const Profile = () => {
       }),
   )
 
+  // WebAuthn相关接口
   interface WebauthnItem {
     fingerprint: string
     id: string
@@ -65,12 +73,17 @@ const Profile = () => {
     options: CredentialCreationOptionsJSON
   }
 
+  // 获取WebAuthn凭证列表
   const [getauthncredentialsloading, getauthncredentials] = useFetch(
     (): PResp<WebauthnItem[]> => r.get("/authn/getcredentials"),
   )
+
+  // 开始WebAuthn注册
   const [, getauthntemp] = useFetch(
     (): PResp<Webauthntemp> => r.get("/authn/webauthn_begin_registration"),
   )
+
+  // 完成WebAuthn注册
   const [postregistrationloading, postregistration] = useFetch(
     (
       session: string,
@@ -86,6 +99,8 @@ const Profile = () => {
         },
       ),
   )
+
+  // 保存用户信息
   const saveMe = async (ssoID?: boolean) => {
     if (password() && password() !== confirmPassword()) {
       notify.warning(t("users.confirm_password_not_same"))
@@ -102,11 +117,15 @@ const Profile = () => {
       }
     })
   }
+
+  // 处理SSO登录
   const ssoID = searchParams["sso_id"]
   if (ssoID) {
     setMe({ ...me(), sso_id: ssoID })
     saveMe(true)
   }
+
+  // 监听消息事件,处理SSO登录
   function messageEvent(event: MessageEvent) {
     const data = event.data
     if (data.sso_id) {
@@ -118,7 +137,11 @@ const Profile = () => {
   onCleanup(() => {
     window.removeEventListener("message", messageEvent)
   })
+
+  // WebAuthn凭证列表
   const [credentials, setcredentials] = createSignal<WebauthnItem[]>([])
+
+  // 初始化WebAuthn凭证列表
   const initauthnEdit = async () => {
     const resp = await getauthncredentials()
     handleRespWithoutNotify(resp, setcredentials)
@@ -130,8 +153,10 @@ const Profile = () => {
   ) {
     initauthnEdit()
   }
+
   return (
     <VStack w="$full" spacing="$4" alignItems="start">
+      {/* 非游客用户显示个人资料编辑界面 */}
       <Show
         when={!UserMethods.is_guest(me())}
         fallback={
@@ -163,6 +188,7 @@ const Profile = () => {
         }
       >
         <Heading>{t("users.update_profile")}</Heading>
+        {/* 用户名修改表单 */}
         <SimpleGrid gap="$2" columns={{ "@initial": 1, "@md": 2 }}>
           <FormControl>
             <FormLabel for="username">{t("users.change_username")}</FormLabel>
@@ -175,6 +201,7 @@ const Profile = () => {
             />
           </FormControl>
         </SimpleGrid>
+        {/* 密码修改表单 */}
         <SimpleGrid gap="$2" columns={{ "@initial": 1, "@md": 2 }}>
           <FormControl>
             <FormLabel for="password">{t("users.change_password")}</FormLabel>
@@ -205,6 +232,7 @@ const Profile = () => {
             <FormHelperText>{t("users.confirm_password-tips")}</FormHelperText>
           </FormControl>
         </SimpleGrid>
+        {/* 保存按钮和2FA启用按钮 */}
         <HStack spacing="$2">
           <Button loading={loading()} onClick={[saveMe, false]}>
             {t("global.save")}
@@ -221,6 +249,8 @@ const Profile = () => {
           </Show>
         </HStack>
       </Show>
+
+      {/* SSO登录部分 */}
       <Show
         when={
           getSettingBool("sso_login_enabled") && !UserMethods.is_guest(me())
@@ -258,6 +288,8 @@ const Profile = () => {
           </Show>
         </HStack>
       </Show>
+
+      {/* WebAuthn部分 */}
       <Show
         when={
           !UserMethods.is_guest(me()) &&
@@ -274,6 +306,7 @@ const Profile = () => {
             </For>
           </MaybeLoading>
         </HStack>
+        {/* 添加WebAuthn凭证按钮 */}
         <Button
           loading={postregistrationloading()}
           onClick={async () => {
@@ -302,6 +335,8 @@ const Profile = () => {
           {t("users.add_webauthn")}
         </Button>
       </Show>
+
+      {/* 用户权限显示 */}
       <HStack wrap="wrap" gap="$2" mt="$2">
         <For each={UserPermissions}>
           {(item, i) => (

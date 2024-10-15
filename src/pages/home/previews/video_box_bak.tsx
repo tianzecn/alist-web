@@ -126,7 +126,7 @@ export const VideoBox = (props: {
         {/* 右侧视频列表和控制 */}
         <VStack
           w="250px"
-          h="400px"
+          h="450px"
           ml="$2"
           spacing="$2"
           flexShrink={0}

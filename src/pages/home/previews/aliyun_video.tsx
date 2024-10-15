@@ -17,6 +17,7 @@ import { ArtPlayerIconsSubtitle } from "~/components/icons"
 import { useNavigate } from "@solidjs/router"
 import { TiWarning } from "solid-icons/ti"
 
+// 定义接口数据结构
 export interface Data {
   drive_id: string
   file_id: string
@@ -49,10 +50,14 @@ const Preview = () => {
   const { pathname, searchParams } = useRouter()
   const { proxyLink } = useLink()
   const navigate = useNavigate()
+
+  // 获取当前目录下的所有视频文件
   let videos = objStore.objs.filter((obj) => obj.type === ObjType.VIDEO)
   if (videos.length === 0) {
     videos = [objStore.obj]
   }
+
+  // 播放下一个视频
   const next_video = () => {
     const index = videos.findIndex((f) => f.name === objStore.obj.name)
     if (index < videos.length - 1) {
@@ -63,6 +68,8 @@ const Preview = () => {
       )
     }
   }
+
+  // 播放上一个视频
   const previous_video = () => {
     const index = videos.findIndex((f) => f.name === objStore.obj.name)
     if (index > 0) {
@@ -73,7 +80,9 @@ const Preview = () => {
       )
     }
   }
+
   let player: Artplayer
+  // 配置Artplayer选项
   let option: Option = {
     id: pathname(),
     container: "#video-player",
@@ -147,6 +156,7 @@ const Preview = () => {
     airplay: true,
   }
 
+  // 处理字幕文件
   const subtitle = objStore.related.filter((obj) => {
     for (const ext of [".srt", ".ass", ".vtt"]) {
       if (obj.name.endsWith(ext)) {
@@ -155,6 +165,8 @@ const Preview = () => {
     }
     return false
   })
+
+  // 处理弹幕文件
   const danmu = objStore.related.find((obj) => {
     for (const ext of [".xml"]) {
       if (obj.name.endsWith(ext)) {
@@ -164,9 +176,10 @@ const Preview = () => {
     return false
   })
 
-  // TODO: add a switch in manage panel to choose whether to enable `libass-wasm`
+  // 是否启用增强ASS字幕支持
   const enableEnhanceAss = true
 
+  // 配置字幕设置
   if (subtitle.length != 0) {
     let isEnhanceAssMode = false
 
@@ -280,6 +293,7 @@ const Preview = () => {
     }
   }
 
+  // 配置弹幕插件
   if (danmu) {
     option.plugins?.push(
       artplayerPluginDanmuku({
@@ -301,6 +315,7 @@ const Preview = () => {
       }),
     )
   }
+
   const [loading, post] = useFetch(
     (): PResp<Data> =>
       r.post("/fs/other", {
@@ -309,6 +324,8 @@ const Preview = () => {
         method: "video_preview",
       }),
   )
+
+  // 组件挂载后的处理
   onMount(async () => {
     const resp = await post()
     setWarnVisible(resp.code !== 200)
@@ -349,8 +366,11 @@ const Preview = () => {
       interval = window.setInterval(resetPlayUrl, 1000 * 60 * 14)
     })
   })
+
   let interval: number
   let curSeek: number
+
+  // 重置播放URL (每14分钟调用一次)
   async function resetPlayUrl() {
     const resp = await post()
     handleResp(resp, async (data) => {
@@ -380,12 +400,17 @@ const Preview = () => {
       }, 1000)
     })
   }
+
+  // 组件卸载时的清理
   onCleanup(() => {
     player?.destroy()
     window.clearInterval(interval)
   })
+
   const [autoNext, setAutoNext] = createSignal()
   const [warnVisible, setWarnVisible] = createSignal(false)
+
+  // 渲染视频播放器
   return (
     <VideoBox onAutoNextChange={setAutoNext}>
       <Box w="$full" h="60vh" id="video-player" />
